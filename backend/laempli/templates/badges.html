@@ -1,0 +1,44 @@
+{# Badges for the result and the status of a job, info icon, relative time (tables) #}
+{# Narrow badges: first letter only, e.g. P for PASS #}
+{% macro result_badge(result, narrow=false) -%}
+{% set cls = {"PASS": "text-bg-success", "FAIL": "text-bg-danger", "WARN": "text-bg-warning"} -%}
+{{ state_badge(result, cls.get(result, 'text-bg-light border'), narrow) }}
+{%- endmacro %}
+{% macro status_badge(status, narrow=false) -%}
+{% set cls = {"RUNNING": "text-bg-primary", "WAITING": "text-bg-info", "STOPPED": "text-bg-secondary"} -%}
+{{ state_badge(status, cls.get(status, 'text-bg-light border'), narrow) }}
+{%- endmacro %}
+{% macro state_badge(text, cls, narrow) -%}
+{% if narrow -%}
+<span class="badge narrow-badge {{ cls }}">{{ (text or "?")[0] }}</span>
+{%- else -%}
+<span class="badge state-badge {{ cls }}">{{ text }}</span>
+{%- endif %}
+{%- endmacro %}
+{# Info icon of a job: popover with path, state, info items, link #}
+{# Hover shows it, it stays open while the mouse is near (laempli.js). job: dict with path, result, status, info, link #}
+{# The icon: narrow badge, same size as result and status #}
+{% macro info_icon(job) -%}
+{% set info = job.info or {} -%}
+{% set link = job.link -%}
+{% if info or link -%}
+{% set tip -%}
+<div class="tip-head"><span class="tip-path">{{ job.path|join(" → ") }}</span>
+<span class="tip-badges">{{ result_badge(job.result) }} {{ status_badge(job.status) }}</span></div>
+{%- if info %}<div class="tip-title">{{ (job.path or [""])[0]|source_name }} info</div><dl class="tip-info">
+{%- for key, value in info.items() %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>{% endif %}
+{%- if link %}<a class="tip-link" href="{{ link }}" target="_blank" rel="noopener">{{ job|link_text }}</a>{% endif %}
+{%- endset -%}
+<button type="button" class="badge narrow-badge info-icon{{ ' has-link' if link }}"
+        data-job-tip="{{ tip|forceescape }}" aria-label="Job info"><svg viewBox="0.5 0.5 15 15" fill="none"
+        stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7v4.5"
+        stroke-linecap="round"/><circle cx="8" cy="4.6" r="0.4" fill="currentColor"/></svg></button>
+{%- endif %}
+{%- endmacro %}
+{# Relative time ("1h 30m 2s ago", updated by base.html), absolute time in the tooltip. t: Unix time or none #}
+{% macro reltime(t) -%}
+{% if t is number -%}
+<span class="reltime" data-time="{{ t }}" data-bs-toggle="tooltip" data-bs-title="{{ t|timestamp }}">
+    {{- t|ago }}</span>
+{%- endif %}
+{%- endmacro %}

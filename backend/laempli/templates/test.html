@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "subnav.html" import source_tabs with context %}
+{% from "badges.html" import reltime %}
+{% set result_class = {"PASS": "success", "FAIL": "danger", "WARN": "warning", "UNKNOWN": "secondary"} %}
+{% set status_class = {"STOPPED": "secondary", "RUNNING": "primary", "WAITING": "info", "UNKNOWN": "secondary"} %}
+{# Buttons of one field: a click selects the value (laempli.js startTest), Send sends the result and the status #}
+{% macro choice(job, field, values, classes) -%}
+<div class="btn-group btn-group-sm" role="group" aria-label="{{ field|capitalize }}">
+    {%- for value in values %}
+    <button type="button" data-field="{{ field }}" data-value="{{ value }}" data-cls="{{ classes[value] }}"
+            {{- ' disabled'|safe if not can_edit }}
+            class="btn btn{{ '' if job[field] == value else '-outline' }}-{{ classes[value] }}"
+            aria-pressed="{{ 'true' if job[field] == value else 'false' }}">{{ value }}</button>
+    {%- endfor %}
+</div>
+{%- endmacro %}
+{% block title %}Test Jobs{% endblock %}
+{% block view %} data-view="test" data-topics='["test"]'{% endblock %}
+{% block subnav %}{{ source_tabs() }}{% endblock %}
+{% block content %}
+    <div class="card" id="test_jobs">
+        <div class="card-header d-flex flex-wrap align-items-baseline gap-2">
+            <h1 class="h5 mb-0 me-auto">Test jobs</h1>
+            <span id="test_status" class="small text-danger"></span>
+            <span class="small text-body-secondary">Set a job for an LED on the device page. Select the result and
+                the status, then Send: both in one event. Cancel: back to the current values.</span>
+        </div>
+        <div class="card-body" data-live="list">
+            <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle w-auto mb-0">
+                <thead>
+                    <tr><th>Job</th><th>Result</th><th>Status</th><th>Change</th>
+                        <th class="text-end">Last change</th></tr>
+                </thead>
+                <tbody>
+                {% for job in jobs %}
+                {% set name = job.path[1] %}
+                <tr data-job="{{ name }}" data-result="{{ job.result }}" data-status="{{ job.status }}">
+                    <td>{{ job.path|join(" → ") }}</td>
+                    <td>{{ choice(job, "result", results, result_class) }}</td>
+                    <td>{{ choice(job, "status", statuses, status_class) }}</td>
+                    <td><form class="m-0 d-flex gap-1" method="post" action="{{ url_for('web_test_job', name=name) }}">
+                        <input type="hidden" name="result" value="{{ job.result }}">
+                        <input type="hidden" name="status" value="{{ job.status }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary test-send" disabled
+                                title="Send the selected result and status (one event)">Send</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary test-cancel" disabled
+                                title="Back to the current result and status">Cancel</button>
+                    </form></td>
+                    <td class="text-end">{{ reltime(job.time) }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

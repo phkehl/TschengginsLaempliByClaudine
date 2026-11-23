@@ -1,0 +1,16 @@
+/prompt.md
+/notes.md
+.venv/
+.pio/
+.pio-core/
+/data/*
+!/data/.gitkeep
+__pycache__/
+/backend/tschenggins-laempli.service
+/backend/tschenggins-laempli.yaml
+/backend/tschenggins-laempli.yaml.bak*
+*~
+/secrets.yaml
+/.vscode/bookmarks.json
+/tools/laempli-notify.yaml
+

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "subnav.html" import jobs_tabs with context %}
+{% from "apilinks.html" import api_links %}
+{% block title %}Lämpli Plots{% endblock %}
+{% block view %} data-view="plots" data-topics='["gitlab", "github", "generic"]'
+    data-keep-days="{{ keep_days }}"{% endblock %}
+{% block subnav %}{{ jobs_tabs() }}{% endblock %}
+{% block content %}
+    {# The plot is made by plots.js (startPlots) from /api/plots. Details panel: right (xl), else below. #}
+    <div class="row g-3">
+    <div class="col-xl-9">
+    <div class="card">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2">
+            <h1 class="h5 mb-0 me-1">Job states over time</h1>
+            {# Selectors: version, time range, kind (one each), sources (several), failed only, search #}
+            <div class="btn-group btn-group-sm" role="group" aria-label="Plot" id="plot_versions">
+                {% for name, title, tip in [("timeline", "Timeline", "One line per job, coloured by state"),
+                                            ("heatmap", "Heatmap", "One line per job, one cell per time step"),
+                                            ("activity", "Activity", "State changes per time step")] %}
+                <button type="button" class="btn btn-outline-primary" data-v="{{ name }}" title="{{ tip }}">{{ title }}
+                </button>
+                {% endfor %}
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Time range" id="plot_ranges">
+                {% for secs, title in [(3600, "1 h"), (21600, "6 h"), (86400, "24 h"), (259200, "3 d"),
+                                       (604800, "7 d"), (keep_days * 86400, keep_days ~ " d")] %}
+                <button type="button" class="btn btn-outline-secondary" data-range="{{ secs }}">{{ title }}</button>
+                {% endfor %}
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Kind" id="plot_kinds">
+                <button type="button" class="btn btn-outline-secondary" data-kind="">All</button>
+                <button type="button" class="btn btn-outline-secondary" data-kind="pipelines">Pipelines</button>
+                <button type="button" class="btn btn-outline-secondary" data-kind="jobs">Jobs</button>
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Sources" id="plot_sources">
+                <button type="button" class="btn btn-outline-secondary" data-src="">All</button>
+                {% for name, title in sources %}
+                <button type="button" class="btn btn-outline-secondary" data-src="{{ name }}">{{ title }}</button>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger" id="plot_failed" aria-pressed="false"
+                    title="Only jobs that failed in the time range">Failed</button>
+            <input type="search" class="form-control form-control-sm plot-search" id="plot_search"
+                   placeholder="Search jobs" aria-label="Search jobs">
+        </div>
+        <div class="card-body">
+            {# Zoom and pan buttons, shown time range, counts, legend #}
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2 small">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Zoom and pan" id="plot_zoom">
+                    <button type="button" class="btn btn-outline-secondary" data-act="out"
+                            title="Zoom out (key -, Ctrl + wheel)" aria-label="Zoom out">−</button>
+                    <button type="button" class="btn btn-outline-secondary" data-act="in"
+                            title="Zoom in (key +, Ctrl + wheel, double click)" aria-label="Zoom in">+</button>
+                    <button type="button" class="btn btn-outline-secondary" data-act="left"
+                            title="Earlier (key ←, drag, Shift + wheel)" aria-label="Earlier">‹</button>
+                    <button type="button" class="btn btn-outline-secondary" data-act="right"
+                            title="Later (key →, drag, Shift + wheel)" aria-label="Later">›</button>
+                    <button type="button" class="btn btn-outline-secondary" data-act="all"
+                            title="All of the time range (key 0)">All</button>
+                </div>
+                <span class="fw-medium" id="plot_shown"></span>
+                <span class="text-body-secondary ms-auto" id="plot_info"></span>
+            </div>
+            <div class="plot-legend small mb-2" id="plot_legend"></div>
+            <div class="plot-box" id="plot_box">
+                <canvas id="plot_overview" title="All of the time range. Drag the window: move, its edges: zoom">
+                </canvas>
+                <canvas id="plot_axis"></canvas>
+                <div class="plot-scroll" id="plot_scroll" tabindex="0" aria-label="Plot of the job states">
+                    <div class="plot-spacer" id="plot_spacer"><canvas id="plot_canvas"></canvas></div>
+                </div>
+                <div class="plot-tip d-none" id="plot_tip"></div>
+            </div>
+            <p class="small text-body-secondary mt-2 mb-0">Drag: move, Shift + drag: zoom to a time range, Ctrl +
+                wheel: zoom, Shift + wheel: move, double click: zoom in; keys + − ← → 0. Click: details. States are
+                those of the events (no LED timeouts).</p>
+        </div>
+        <div class="card-footer">
+            {{ api_links([("data", url_for("api_plots"), "State changes of the last 24 h")]) }}
+        </div>
+    </div>
+    </div>
+    <div class="col-xl-3">
+        <div class="card plot-panel plot-idle" id="plot_panel">
+            <div class="card-header d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 d-none" id="plot_back">‹ Back
+                </button>
+                <h2 class="h6 mb-0 me-auto text-truncate" id="plot_panel_title">Details</h2>
+                <button type="button" class="btn-close d-none" id="plot_panel_close" aria-label="Close"></button>
+            </div>
+            <div class="card-body small" id="plot_panel_body"></div>
+        </div>
+    </div>
+    </div>
+{% endblock %}

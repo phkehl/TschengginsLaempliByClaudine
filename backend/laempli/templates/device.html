@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% from "badges.html" import result_badge, status_badge, info_icon, reltime %}
+{% from "apilinks.html" import api_links %}
+{% from "subnav.html" import device_tabs %}
+{% block title %}Lämpli {% if info.name %}{{ info.name }} ({{ info.id }}){% else %}{{ info.id }}{% endif -%}
+{% endblock %}
+{% block view %} data-view="device" data-topics='{{ ["device:" ~ info.id, "devices", "jobs", "firmwares"]|tojson }}'
+    data-can-edit="{{ can_edit|tojson }}"{% endblock %}
+{% block subnav %}{{ device_tabs(all_devices, info.id) }}{% endblock %}
+{% block content %}
+    {# Forms disabled without edit rights #}
+    {% set ro = "" if can_edit else " disabled" %}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3" data-live="head">
+        <h1 class="h3 mb-0 me-2">{% if info.name %}{{ info.name }}{% else %}<span
+            class="text-body-secondary">(none)</span>{% endif %} ({{ info.id }})</h1>
+    </div>
+
+    {# Device details, as in the Devices table #}
+    <div class="card mb-3" id="details">
+        <div class="card-header"><h2 class="h5 mb-0">Device</h2></div>
+        <div class="card-body">
+            <dl class="device-details mb-0" data-live="details">
+                <div><dt>Status</dt><dd>{% if info.connected %}<span class="badge text-bg-success" data-dev-status="{{ info.id }}">connected</span>
+                    {%- else %}<span class="badge text-bg-secondary" data-dev-status="{{ info.id }}">not connected</span>{% endif %}</dd></div>
+                <div><dt>Last report</dt><dd>{{ reltime(info.report) }}</dd></div>
+                <div><dt>Since</dt><dd>{{ reltime(info.since) }}</dd></div>
+                <div><dt>WiFi</dt><dd>{{ info.ssid or "" }}</dd></div>
+                <div><dt>Signal</dt><dd>{{ "%d dBm"|format(info.rssi) if info.rssi is number else "" }}</dd></div>
+                <div><dt>Uptime</dt><dd>{{ info.uptime|dhms if info.uptime is number else "" }}</dd></div>
+                <div><dt>CPU</dt><dd>{{ info.cpu or "" }}</dd></div>
+                <div><dt>Free heap</dt><dd>{{ info|heap }}</dd></div>
+                <div><dt>Local IP</dt><dd>{{ info.local_ip or "" }}</dd></div>
+                <div><dt>Remote IP</dt><dd>{{ info.remote_ip or "" }}</dd></div>
+                <div><dt>Firmware</dt><dd{{ ' class="text-danger fw-bold"'|safe if firmware.newer }}>
+                    {{- info.firmware or "" }}</dd></div>
+                <div><dt>User</dt><dd>{{ info.user or "" }}</dd></div>
+                <div><dt>LEDs</dt><dd>{{ info.configured or 0 }}/{{ info.leds or "?" }}</dd></div>
+            </dl>
+        </div>
+        {# Firmware update: button and newer version, or progress while it runs #}
+        {% set ota = info.ota %}
+        <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+            <span class="d-flex flex-wrap align-items-center gap-2" data-live="firmware-button">
+                {%- if ota and ota.state in ("starting", "running", "done") %}
+                {%- set pct = ((ota.done * 100) // ota.size) if ((ota.state == "running") and ota.size) else
+                    (100 if ota.state == "done" else 0) %}
+                <span class="progress ota-progress" role="progressbar" aria-label="Firmware update"
+                    aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100" id="firmware_progress"><span
+                    class="progress-bar{{ ' progress-bar-striped progress-bar-animated' if ota.state != 'done' }}"
+                    style="width: {{ pct }}%">{{ pct }}%</span></span>
+                <span class="small">{{ "Restarting with" if ota.state == "done" else "Updating to" }}
+                    {{ ota.version }}</span>
+                {%- elif firmware.usb_only %}
+                <span class="small text-body-secondary">Firmware update only over USB</span>
+                {%- if firmware.newer %}
+                <span class="small">Available: {{ firmware.latest.version }}</span>
+                {%- endif %}
+                {%- else %}
+                <button type="button" class="btn btn-primary" id="firmware_update"
+                {{- " disabled" if ((not can_edit) or (not firmware.newer) or (not info.connected)) -}}
+                >Update firmware</button>
+                {%- if ota and ota.state == "failed" %}
+                <span class="small text-danger">Update failed: {{ ota.error }}</span>
+                {%- endif %}
+                {%- if firmware.newer %}
+                <span class="small">Available: {{ firmware.latest.version }}</span>
+                {%- elif firmware.running and firmware.latest %}
+                <span class="small text-body-secondary">Firmware is up to date</span>
+                {%- endif %}
+                {%- endif %}</span>
+            <span class="form-status small me-auto"></span>
+            {{ api_links([
+                ("devices", url_for("api_devices"), "All devices with connection and report data"),
+            ]) }}
+        </div>
+    </div>
+    {# LED colour dot: colour = result, animation = status #}
+    {% macro swatch(state) -%}
+    {% if state -%}
+    <span class="swatch r-{{ (state.result or 'unknown')|lower }}
+        {%- if state.status in ('RUNNING', 'WAITING', 'UNKNOWN') %} s-{{ state.status|lower }}{% endif %}"></span>
+    {%- else -%}
+    <span class="swatch off"></span>
+    {%- endif %}
+    {%- endmacro %}
+    <form method="post" class="card" id="ledform" action="{{ url_for('web_device', dev_id=info.id) }}">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2">
+            <h2 class="h5 mb-0">{{ "LED rows" if project_rows else "LEDs" }}</h2>
+            {# LED test that runs on the device (report) #}
+            <span data-live="led-test">
+                {%- set test = info.led_test -%}
+                {%- if test %}
+                <span class="badge text-bg-info">LED test:
+                    {% if (test.mode == "find") and project_rows -%}
+                    row {{ (test.first // (test.count or 1)) + 1 }}
+                    {%- elif test.mode == "find" -%}
+                    LED {{ test.first + 1 }}
+                    {%- else -%}
+                    {{ "rainbow" if test.mode == "demo" else test.mode }}
+                    {%- endif %}</span>
+                {%- endif -%}
+            </span>
+            {% if not can_edit %}<span class="badge text-bg-secondary ms-auto" title="You have no edit rights for this
+                device">read only</span>{% endif %}
+        </div>
+        <div class="card-body">
+            {% if error %}
+            <div class="alert alert-danger">Not saved: {{ error }}</div>
+            {% endif %}
+            {# Left: LEDs as on the device, click selects. Right: fields of the selected LED (or row) #}
+            <div class="row g-3">
+            {% if project_rows %}
+            <div class="col-lg-6">
+                <div class="led-visual led-rows" id="led_visual">
+                    {% for ix, row, leds in project_rows %}
+                    <div class="led-row" data-ix="{{ ix }}">
+                        <button type="button" class="led-row-num" data-ix="{{ ix }}" aria-pressed="false"
+                                aria-label="Row {{ ix + 1 }}">{{ ix + 1 }}</button>
+                        <div class="led-cells" data-live="tile-{{ ix }}">
+                            {% for num in view.order %}
+                            {% set led = leds[num] %}
+                            {# Number and badges (tooltip), below the (i) #}
+                            {% if led %}
+                            {% set tip = "LED " ~ (num + 1) ~ ": " ~ led.label ~ "\n" ~ led.result ~ ", " ~
+                                led.status %}
+                            <span class="led-cell">
+                                <span class="led-cell-state" data-bs-toggle="tooltip" data-bs-custom-class="info-tip"
+                                      data-bs-title="{{ tip }}">
+                                    <span class="led-cell-num">{{ num + 1 }}</span>
+                                    {{ result_badge(led.result, true) }}{{ status_badge(led.status, true) }}</span>
+                                <span class="led-cell-info">{{ info_icon(led) }}</span></span>
+                            {% else %}
+                            <span class="led-cell text-body-tertiary">
+                                <span class="led-cell-state">
+                                    <span class="led-cell-num">{{ num + 1 }}</span>
+                                    <span class="badge narrow-badge narrow-off">&middot;</span><span
+                                        class="badge narrow-badge narrow-off">&middot;</span></span>
+                                <span class="led-cell-info"><span class="badge narrow-badge invisible"
+                                    aria-hidden="true">i</span></span></span>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-lg-6">
+                {% for ix, row, leds in project_rows %}
+                {% set current = ((row.path[0] ~ ":" ~ row.path[1]) if (row and row.path) else "") %}
+                {# Left: one line per setting, right: the pipelines #}
+                <div class="led-fields row-fields" data-ix="{{ ix }}">
+                    <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <h3 class="h6 mb-0">Row {{ ix + 1 }}</h3>
+                            <span class="badge text-bg-warning led-changed" hidden>not saved</span>
+                        </div>
+                        <div class="led-form">
+                            <div class="led-form-label"><label for="project_{{ ix }}">Project</label>
+                                <a id="events_{{ ix }}" hidden>(events)</a></div>
+                            <select class="form-select form-select-sm led-form-input" name="project_{{ ix }}"
+                                    id="project_{{ ix }}"{{ ro }}>
+                                <option value="">(off)</option>
+                                {% set names = namespace(found=(current == "")) %}
+                                {% for source, project in projects %}
+                                {% set value = source ~ ":" ~ project %}
+                                {% if value == current %}{% set names.found = true %}{% endif %}
+                                <option value="{{ value }}"{{ " selected" if value == current }}>{{ source }}:
+                                    {{ project }}</option>
+                                {% endfor %}
+                                {% if not names.found %}
+                                <option value="{{ current }}" selected>{{ row.path[0] }}: {{ row.path[1] }}
+                                    (no events)</option>
+                                {% endif %}
+                            </select>
+                            <label class="led-form-label" for="max_age_{{ ix }}">Max. age</label>
+                            <input type="text" class="form-control form-control-sm led-form-input led-form-short"
+                                   name="max_age_{{ ix }}" id="max_age_{{ ix }}"
+                                   value="{{ (row.max_age if row else none)|age }}" maxlength="20"
+                                   placeholder="{{ max_age }}"{{ ro }}>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="h6 mb-2">Pipelines <span class="small fw-normal text-body-secondary">(LED 1 first,
+                            oldest)</span></h3>
+                        {# One grid: LED number (right), badges, name #}
+                        <div class="row-pipes small" data-live="state-{{ ix }}">
+                            {% for led in leds if led %}
+                            <div class="row-pipe">
+                                <span class="row-pipe-state"><span class="row-pipe-num">{{ loop.index }}</span>
+                                    {{ result_badge(led.result) }} {{ status_badge(led.status) }}</span>
+                                <span class="row-pipe-label">{{ led.label }}</span></div>
+                            {% else %}
+                            <span class="text-body-secondary">off</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <input type="hidden" name="rows" value="{{ rows|length }}">
+            <div class="col-md-5 col-xl-4">
+                <div class="led-visual led-grid" id="led_visual" style="--cols: {{ view.cols }}">
+                    {% for num in view.order %}
+                    {% set state = rows[num][2] %}
+                    {# Info icon outside the button: no link in a button #}
+                    <div class="led-tile-wrap">
+                        <button type="button" class="led-tile" data-ix="{{ num }}" aria-pressed="false">
+                            <span class="d-flex flex-column gap-1" data-live="tile-{{ num }}">
+                                <span class="led-tile-head">{{ swatch(state) }} {{ num + 1 }}</span>
+                                {% if state %}
+                                <span class="led-tile-label">{{ state.label }}</span>
+                                {{ result_badge(state.result) }}{{ status_badge(state.status) }}
+                                {% else %}
+                                <span class="led-tile-label text-body-secondary">off</span>
+                                {% endif %}
+                            </span>
+                        </button>
+                        <span class="led-tile-info" data-live="tile-info-{{ num }}">
+                            {%- if state %}{{ info_icon(state) }}{% endif -%}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-7 col-xl-8">
+                {% for ix, led, state in rows %}
+                <div class="led-fields" data-ix="{{ ix }}">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h3 class="h6 mb-0">LED {{ ix + 1 }}</h3>
+                        <span class="badge text-bg-warning led-changed" hidden>not saved</span>
+                    </div>
+                    {# One line per setting: label, input #}
+                    <div class="led-form">
+                        <label class="led-form-label" for="name_{{ ix }}">Name</label>
+                        <input type="text" class="form-control form-control-sm led-form-input led-form-name"
+                               name="name_{{ ix }}" id="name_{{ ix }}" value="{{ led.name if led else '' }}"
+                               maxlength="40" placeholder="(none)"{{ ro }}>
+                        <div class="led-form-label">Job <a id="events_{{ ix }}" hidden>(events)</a></div>
+                        <div class="led-form-input">
+                            <div class="chain" id="chain_{{ ix }}"
+                                 data-path='{{ ((led.path if led else none) or [])|tojson }}'></div>
+                            <input type="hidden" name="path_{{ ix }}" id="path_{{ ix }}" value="[]">
+                        </div>
+                        <label class="led-form-label" for="max_age_{{ ix }}">Max. age</label>
+                        <input type="text" class="form-control form-control-sm led-form-input led-form-age"
+                               name="max_age_{{ ix }}" id="max_age_{{ ix }}"
+                               value="{{ (led.max_age if led else none)|age }}" maxlength="20"
+                               placeholder="(e.g. 1h, 7d. empty = forever)"{{ ro }}>
+                        <div class="led-form-group" style="grid-row: span {{ sound_events|length }}">Sounds</div>
+                        {% for key, label in sound_events %}
+                        {% set value = ((led.sounds if led else none) or {}).get(key, "") %}
+                        <label class="led-form-sub" for="sound_{{ key }}_{{ ix }}">{{ label }}</label>
+                        <div class="input-group input-group-sm led-form-input led-form-sound">
+                            <select class="form-select" name="sound_{{ key }}_{{ ix }}"
+                                    id="sound_{{ key }}_{{ ix }}"{{ ro }}>
+                                {% for choice, text in sound_choices %}
+                                <option value="{{ choice }}"{{ " selected" if choice == value }}>{{ text }}</option>
+                                {% endfor %}
+                                {% if value not in (sound_choices|map("first")|list) %}
+                                <option value="{{ value }}" selected>{{ value }} (not on device)</option>
+                                {% endif %}
+                            </select>
+                            {% if sound_choices|length > 1 %}
+                            <button type="button" class="btn btn-outline-secondary sound-test"
+                                    title="Play this sound on the device"
+                                    aria-label="Play sound"{{ ro }}>&#9654;&#xFE0E;</button>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            </div>
+            {# LED test buttons: only if the firmware has it, only while connected #}
+            <div class="led-test-bar" data-live="led-test-buttons">
+                {% if settings and settings.options.led_test %}
+                {% set off = ro if ro else ("" if info.connected else " disabled") %}
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                    <span class="small text-body-secondary">LED test</span>
+                    {% for mode, label, colour in [("red", "Red", "danger"), ("green", "Green", "success"),
+                                                   ("blue", "Blue", "primary"), ("white", "White", "secondary"),
+                                                   ("off", "Off", "secondary"), ("demo", "Rainbow", "secondary")] %}
+                    <button type="button" class="btn btn-sm btn-outline-{{ colour }}" data-led-test="{{ mode }}"
+                            {{- off }}>{{ label }}</button>
+                    {% endfor %}
+                    <button type="button" class="btn btn-sm btn-outline-warning" data-led-test="find"
+                            title="Flash it on the device"{{ off }}>Find {{ "row" if project_rows else "LED" }}
+                        <span class="led-find-num">1</span></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-led-test="normal"
+                            {{- off }}>Normal</button>
+                </div>
+                {% endif %}
+            </div>
+            <details class="mt-3">
+                <summary class="text-body-secondary">Help</summary>
+                <div class="alert alert-light border mt-2 mb-0 small">
+                    <p>Left: the LEDs as on the device. Click {{ "a row or an LED" if project_rows else "an LED" }}
+                        to show its fields on the right. Blue border: shown now. Dashed orange border: changed, not
+                        saved. Save saves all changes, Revert discards them. LED test (below the LEDs, newer firmware
+                        only): the device shows it for 60 s; Find blinks the selected {{ "row" if project_rows else
+                        "LED" }}.{% if project_rows %} Letters: result
+                        (P pass, F fail, W warn, U unknown) and status (R running, W waiting, S stopped, U unknown);
+                        the tooltip has the pipeline, the (i) below its info.{% endif %}</p>
+                    {% if project_rows %}
+                    <p>Each row shows the pipelines of one project, one LED per pipeline: GitLab: the main pipeline of
+                        each ref. GitHub: each workflow of each branch. The stages and jobs in a pipeline have no LED.
+                        LED 1 has the oldest pipeline, the next LEDs have newer ones, the rest of the row is off. A
+                        pipeline moves to the new end when a new run starts. The row has {{ row_len }} LEDs: if there
+                        are more pipelines, the oldest are not shown.</p>
+                    <p class="mb-0">Max. age: a pipeline without change for this time is not shown. Empty: the default
+                        (grey text), 0: no limit. Values: seconds or e.g. 12h, 7d. Colour and light as for one job:
+                        PASS green, FAIL red, WARN yellow, UNKNOWN white; waits: fast pulse, runs: slow pulse.</p>
+                    {% else %}
+                    <p>Each LED shows one job: select the source, then the things in it, from coarse to fine. For
+                        GitLab: project, ref (branch or tag), then a job of the main pipeline or a trigger job (its
+                        downstream pipeline), then a job of the downstream pipeline. "(this pipeline)" stops there: the
+                        LED shows the main pipeline (at the ref) or the downstream pipeline (at the trigger job). For
+                        GitHub: repository, branch, workflow, then a job of the workflow. "(this workflow)" stops at the
+                        workflow: the LED shows its newest run. For generic jobs (scripts): the names that the script
+                        set. The lists have the jobs that sent events. "(off)" means the LED is off. The name is
+                        optional, a short label for the device display.</p>
+                    <p>Max. age: when the last change of the job is older, its data is outdated: the LED shows no
+                        data (status and result UNKNOWN, info "outdated"). This also covers a final event that never
+                        comes. Values: seconds or e.g. 1h, 1d12h, 7d. Empty (or 0): forever.</p>
+                    <p>Sounds: the device plays a melody (or on the Hello the sound effect) when the job stops. Fail:
+                        result FAIL or WARN, pass: result PASS, each time. Pass &rarr; fail: FAIL or WARN after PASS,
+                        fail &rarr; pass: PASS after FAIL or WARN; these two play instead of fail and pass, if set.
+                        The lists have the sounds that the device reports (needs a newer firmware). If more jobs stop
+                        at the same time, the device plays one sound: pass &rarr; fail first, then fail, fail &rarr;
+                        pass, pass; the lowest LED first. &#9654;&#xFE0E; plays the selected sound on the device now, also
+                        before you save.</p>
+                    <p class="mb-0">Colour: result of the last run: PASS green, FAIL red, WARN yellow, UNKNOWN (or no
+                        result yet) white. Waits: fast pulse, runs: slow pulse, no data: blink.</p>
+                    {% endif %}
+                </div>
+            </details>
+        </div>
+        <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+            <button type="submit" class="btn btn-primary" id="save"{{ ro }}>Save</button>
+            <button type="button" class="btn btn-outline-secondary" id="cancel"{{ ro }}>Revert</button>
+            <span class="form-status small me-auto"></span>
+            {{ api_links([
+                ("state", url_for("api_state", dev_id=info.id), "LED states sent to the device"),
+                ("leds", url_for("api_leds", dev_id=info.id), "LED config and LED states"),
+            ]) }}
+        </div>
+    </form>
+
+    <form method="post" class="card mt-3" id="settings" action="{{ url_for('web_device_settings', dev_id=info.id) }}">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2" data-live="settings-head">
+            <h2 class="h5 mb-0 me-2">Settings</h2>
+            {% if settings_rows %}
+            {% set num = settings.pending|length %}
+            {% if num %}
+            <span class="badge text-bg-warning">not synced</span>
+            <span class="small text-body-secondary">{{ num }} change{{ "s" if num > 1 }} pending, {{ "sending to the
+                device" if info.connected else "sent when the device connects" }}</span>
+            {% else %}
+            <span class="badge text-bg-success">synced with device</span>
+            {% endif %}
+            {% endif %}
+            {% if not can_edit %}<span class="badge text-bg-secondary ms-auto" title="You have no edit rights for this
+                device">read only</span>{% endif %}
+        </div>
+        <div class="card-body">
+            {% if settings_error %}
+            <div class="alert alert-danger">Not saved: {{ settings_error }}</div>
+            {% endif %}
+            {% if settings_rows %}
+            <div class="row g-3">
+                {% for row in settings_rows %}
+                <div class="col-sm-6 col-lg-4">
+                    <label class="form-label mb-1" for="set_{{ row.key }}"
+                           data-live="label-{{ row.key }}">{{ row.label }}
+                        {% if row.pending %}<span class="badge text-bg-warning">pending</span>{% endif %}</label>
+                    {% if row.choices %}
+                    <select class="form-select form-select-sm" name="{{ row.key }}" id="set_{{ row.key }}"{{ ro }}>
+                        {% for value, text in row.choices %}
+                        <option value="{{ value }}"{{ " selected" if value == row.value }}>{{ text }}</option>
+                        {% endfor %}
+                    </select>
+                    {% elif row.min is none %}
+                    <input type="text" class="form-control form-control-sm" name="{{ row.key }}" id="set_{{ row.key }}"
+                           value="{{ row.value }}" maxlength="{{ name_max }}"
+                           pattern="[A-Za-z0-9 _.\-\u00a0-\u{10ffff}]*"
+                           placeholder="(none)"{{ ro }}>
+                    {% else %}
+                    <input type="number" class="form-control form-control-sm" name="{{ row.key }}"
+                           id="set_{{ row.key }}" value="{{ row.value }}" min="{{ row.min }}" max="{{ row.max }}"
+                           required{{ ro }}>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <details class="mt-3">
+                <summary class="text-body-secondary">Help</summary>
+                <div class="alert alert-light border mt-2 mb-0 small">
+                    <p>The device has the settings; change them here or on the device (Chlotz: [≡] Device, Display;
+                        serial terminal: name, led brightness). The device sends its settings to the backend on each
+                        change and each heartbeat. The list has the settings of this device type.</p>
+                    <p class="mb-0">A change here is "pending" until the device has it: it goes to the device at once,
+                        or when the device connects. If a setting changes on both sides while the device is not
+                        connected, the value from here wins. Name: max. {{ name_max }} bytes (ä: 2 bytes), letters,
+                        digits, spaces, - _ . (empty: none).{% if "dim_timeout" in settings["values"] %} 0 s: never dim,
+                        no screensaver.{% endif %}{% if "led_reverse" in settings["values"] %} Reverse LEDs: Chlotz: LEDs
+                        in the other order and display turned by 180°. Chlötzli and Chischtli: LEDs in the other order (on:
+                        LED 1 at the top). Stägge: LEDs in the other order in each row, rows stay. Gitta: LEDs turned by 180°
+                        (on: LED 1 at the bottom right, for the USB cable on the right). Hello: the light goes round
+                        the other way.{% endif %}</p>
+                </div>
+            </details>
+            {% else %}
+            <p class="mb-0 text-body-secondary">No settings from the device yet. It sends them when it connects (needs
+                a newer firmware).</p>
+            {% endif %}
+        </div>
+        <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+            {% if settings_rows %}
+            <button type="submit" class="btn btn-primary" id="settings_save"{{ ro }}>Save</button>
+            <span class="form-status small"></span>
+            {% endif %}
+            <span class="ms-auto">{{ api_links([
+                ("settings", url_for("api_settings", dev_id=info.id), "Device settings: values, options, pending"),
+            ]) }}</span>
+        </div>
+    </form>
+
+    {# Known jobs: {name: {"job": <is a job>, "children": {...}}}, source names first #}
+    <script type="application/json" id="tree">{{ tree|tojson }}</script>
+{% endblock %}

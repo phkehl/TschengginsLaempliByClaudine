@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "subnav.html" import source_tabs with context %}
+{% from "apilinks.html" import api_links %}
+{% from "tablefilters.html" import log_filters %}
+{% block title %}GitHub Events{% endblock %}
+{% block view %} data-view="github_log" data-topics='["github"]' data-table="github_log"{% endblock %}
+{% block subnav %}{{ source_tabs() }}{% endblock %}
+{% block content %}
+    <div class="card">
+        <div class="card-header d-flex flex-wrap align-items-baseline gap-2">
+            <h1 class="h5 mb-0 me-auto">GitHub workflow run and job events</h1>
+            <span class="small text-body-secondary" data-live="count">{{ total }}
+                events in the last {{ keep_days }} day{{ "s" if keep_days != 1 }}
+                {{- (", %d ignored"|format(ignored)) if ignored }}, newest first</span>
+        </div>
+        <div class="card-body" data-live="list">
+            {% if total %}{{ log_filters("github_log", kinds, states) }}{% endif %}
+            <div class="table-responsive">
+            <table {% if total %}
+                id="github_log" data-server="{{ url_for('web_github_rows') }}"
+                {% endif %}class="table table-sm table-hover">
+                <thead>
+                    <tr><th class="text-end">Time</th><th>Event</th><th>Repository</th><th>Branch</th><th>Workflow</th><th>Run</th>
+                        <th>Job</th><th>Status</th><th>Trigger</th><th>User</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            </div>
+            {% if not total %}
+            <p class="text-body-secondary mb-0">No data for the past {{ keep_days }} day{{ "s" if keep_days != 1 }}.</p>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            {{ api_links([
+                ("data", url_for("api_github"), "GitHub state made from the events"),
+                ("log", url_for("api_github_log"), "GitHub workflow run and job events (paged)")
+            ]) }}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,77 @@
+# Tschenggins Lämpli backend configuration
+#
+# Relative paths are relative to the directory of this file.
+
+# Address to listen on: 127.0.0.1 for a reverse proxy on the same host. The backend trusts the X-Forwarded-User and
+# X-Forwarded-Prefix headers from all clients, so use another address only for tests.
+listen: 127.0.0.1
+
+# Port to listen on
+port: 8070
+
+# Port of the WebSocket server (/ws/device, /ws/web), default: port + 1
+#ws_port: 8071
+
+# Data directory: device files (laempli_<device ID>.json), firmware files for OTA updates (fw/<name>_<version>.bin),
+# raw events and event logs of the sources (events.sqlite)
+data: ../data
+
+# Days to keep raw events. At start, the backend makes all job states again from them. Jobs without events in this
+# time go away.
+events_keep_days: 31
+
+# Housekeeping (remove old events, jobs, firmware files and devices) interval [s]
+housekeeping_interval: 3600
+
+# Firmware files to keep for each firmware name (newest ones)
+firmware_keep: 10
+
+# Remove devices that were not connected for this many days (0 = never). This also removes their LED config.
+devices_keep_days: 365
+
+# Heartbeat (time event to the devices) interval [s]
+heartbeat: 15
+
+# Log level: debug (logs each request), info, warning, error
+log_level: info
+
+# Users that can change the LED config and the settings of the devices. The reverse proxy sends the user name in the
+# X-Forwarded-User header. Empty list: nobody.
+editors:
+    - flip
+
+# Users that can change only some devices (LED config, settings, firmware update, sound and LED test): user name ->
+# list of device IDs. The editors above can change all devices.
+device_editors: {}
+#    laempli:
+#        - "gitta-87e94c"
+#        - "chloetzli-1ee4d5"
+
+# GitLab webhook signing tokens (whsec_..., one per webhook), check the webhook-signature header. One of them must
+# match. Empty list: no check.
+gitlab_signing_tokens:
+#    - whsec_...
+#    - whsec_...
+
+# GitHub webhook secrets (one per webhook, you choose them), check the X-Hub-Signature-256 header. One of them must
+# match. Empty list: no check. Use the same text as "Secret" in the GitHub webhook settings. Make one with:
+#     openssl rand -hex 20
+#     python3 -c "import secrets; print(secrets.token_hex(20))"
+github_webhook_secrets:
+#    - <secret>
+
+# GitLab projects (path, e.g. "group/project", or a pattern with * ? [...], e.g. "group/sub/*") and GitHub
+# repositories ("owner/repo", or a pattern) to ignore: the backend stores their events (and shows them as ignored on
+# the source page), but makes no jobs from them. A change applies at the next start (the replay).
+gitlab_ignored_projects:
+#    - "group/project"
+github_ignored_repos:
+#    - "owner/repo"
+
+# Generic jobs (scripts, e.g. cron jobs, see README): tokens, check the X-Laempli-Token header. One of them must match.
+# Empty list: no check. Use the same text in the scripts (curl -H "X-Laempli-Token: <token>", laempli-notify.py
+# --token or LAEMPLI_NOTIFY_TOKEN). Make one with:
+#     openssl rand -hex 20
+#     python3 -c "import secrets; print(secrets.token_hex(20))"
+generic_tokens:
+#    - <token>

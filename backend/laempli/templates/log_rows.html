@@ -1,0 +1,53 @@
+{# Event log table rows (web_<source>_rows in web.py), one macro per source. ev: event log entry. #}
+{# The page script (laempli.js) puts the cells into the table, with the classes of the <tr> and the <td>s. #}
+{% from "badges.html" import reltime, result_badge, status_badge %}
+{% macro gitlab_row(ev) -%}
+{% set status_class = {"success": "text-bg-success", "failed": "text-bg-danger", "running": "text-bg-primary",
+                       "pending": "text-bg-info", "canceled": "text-bg-light border"} -%}
+<tr class="{{ 'ignored' if ev.ignored else '' }}">
+    <td class="text-end">{{ reltime(ev.time) }}</td>
+    <td>{{ ev.kind or "pipeline" }}</td>
+    <td class="clip">{{ ev.project }}</td>
+    <td class="clip">{{ ev.ref }}</td>
+    <td class="clip-s">{{ ev.trigger or "" }}</td>
+    <td class="clip">
+        {%- if ev.url %}<a href="{{ ev.url }}">{{ ev.pipeline }}</a>
+        {%- else %}{{ ev.pipeline }}{% endif %} {{ ev.name or "" }}</td>
+    <td class="clip">{{ "%s: %s"|format(ev.stage, ev.job) if ev.job else "" }}</td>
+    <td>{% if ev.status %}<span class="badge state-badge {{ status_class.get(ev.status, 'text-bg-secondary') }}">
+        {{ ev.status }}</span>{% endif %}{{ ((" (" ~ ev.reason ~ ")") if ev.reason else " (old, ignored)") if ev.ignored else "" }}</td>
+    <td class="text-end">{{ "%d/%d/%d"|format(ev.jobs_ok, ev.jobs_failed, ev.jobs) if ev.jobs is number else "" }}</td>
+    <td class="clip-s">{{ ev.source or "" }}</td>
+    <td class="clip-s">{{ ev.user or "" }}</td>
+</tr>
+{%- endmacro %}
+{% macro github_row(ev) -%}
+{% set status_class = {"success": "text-bg-success", "failure": "text-bg-danger", "timed_out": "text-bg-danger",
+                       "startup_failure": "text-bg-danger", "in_progress": "text-bg-primary",
+                       "queued": "text-bg-info", "requested": "text-bg-info", "pending": "text-bg-info",
+                       "waiting": "text-bg-info", "cancelled": "text-bg-light border"} -%}
+<tr class="{{ 'ignored' if ev.ignored else '' }}">
+    <td class="text-end">{{ reltime(ev.time) }}</td>
+    <td>{{ ev.kind or "run" }}</td>
+    <td class="clip">{{ ev.repo }}</td>
+    <td class="clip">{{ ev.branch }}</td>
+    <td class="clip">{{ ev.workflow }}</td>
+    <td>{% if ev.url %}<a href="{{ ev.url }}">{{ ev.run }}</a>{% else %}{{ ev.run }}{% endif %}</td>
+    <td class="clip">{{ ev.job or "" }}</td>
+    <td>{% if ev.status %}<span class="badge state-badge {{ status_class.get(ev.status, 'text-bg-secondary') }}">
+        {{ ev.status }}</span>{% endif %}{{ ((" (" ~ ev.reason ~ ")") if ev.reason else " (old, ignored)") if ev.ignored else "" }}</td>
+    <td class="clip-s">{{ ev.event or "" }}</td>
+    <td class="clip-s">{{ ev.user or "" }}</td>
+</tr>
+{%- endmacro %}
+{% macro generic_row(ev) -%}
+<tr>
+    <td class="text-end">{{ reltime(ev.time) }}</td>
+    <td>{{ ev.action }}</td>
+    <td class="clip">{{ ev.path }}</td>
+    <td>{% if ev.status %}{{ status_badge(ev.status) }}{% endif %}</td>
+    <td>{% if ev.result %}{{ result_badge(ev.result) }}{% endif %}</td>
+    <td class="text-end">{{ ev.timeout|dhms if ev.timeout else ("none" if ev.timeout == 0 else "") }}</td>
+    <td class="clip-s">{{ ev.client or "" }}</td>
+</tr>
+{%- endmacro %}

@@ -1,0 +1,6 @@
+# Gitta (2 MB flash): one app partition, no firmware update (OTA), same NVS as default. Two app partitions would
+# have 960 kB each, the firmware is about 1.1 MB.
+# Name,   Type, SubType, Offset,   Size,     Flags
+nvs,      data, nvs,     0x9000,   0x5000,
+factory,  app,  factory, 0x10000,  0x1E0000,
+coredump, data, coredump,0x1F0000, 0x10000,

@@ -1,0 +1,6 @@
+{# Links to the GET API (JSON) for the card footers #}
+{# links: list of (text, url, tooltip) #}
+{% macro api_links(links) -%}
+<span class="api-links small text-body-secondary">JSON:
+    {%- for text, url, tip in links %}<a href="{{ url }}" title="{{ tip }}">{{ text }}</a>{% endfor %}</span>
+{%- endmacro %}

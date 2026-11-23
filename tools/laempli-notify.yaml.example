@@ -1,0 +1,9 @@
+# Config of laempli-notify.py: copy to laempli-notify.yaml next to the script (used without --config), or give the
+# file with --config <file>. Needs python3-yaml. Options --url and --token come first, the environment variables
+# LAEMPLI_NOTIFY_URL and LAEMPLI_NOTIFY_TOKEN last.
+
+# Backend base URL, with user and password for basic auth (optional)
+url: "https://<user>:<password>@example.com/tschenggins-laempli"
+
+# One of generic_tokens of the backend config (header X-Laempli-Token), leave out if the backend has no tokens
+token: "<token>"

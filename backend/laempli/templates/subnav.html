@@ -1,0 +1,36 @@
+{# Second navbar below the main one (base.html block subnav) #}
+{# tabs: list of (text, url, active, tooltip), cls: class of the list #}
+{% macro subnav(label, tabs, cls) -%}
+<nav class="navbar navbar-expand bg-body-tertiary border-bottom py-0" aria-label="{{ label }}">
+    <div class="container-fluid">
+        <ul class="navbar-nav sub-tabs {{ cls }}" data-live="sub-tabs">
+            {% for text, url, active, tip in tabs %}
+            <li class="nav-item">
+                <a class="nav-link{{ ' active' if active }}"{{ ' aria-current="page"'|safe if active }}
+                   href="{{ url }}"{% if tip %} title="{{ tip }}"{% endif %}>{{ text }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</nav>
+{%- endmacro %}
+{# Device tabs: overview, then one per device. devices: device infos, current: ID, none: overview #}
+{% macro device_tabs(devices, current=none) -%}
+{% set ns = namespace(tabs=[("Overview", url_for("web_devices"), (current is none), none)]) -%}
+{% for dev in devices %}{% set ns.tabs = ns.tabs + [(dev.name or dev.id, url_for("web_device", dev_id=dev.id),
+    (dev.id == current), dev.id)] %}{% endfor -%}
+{{ subnav("Devices", ns.tabs, "device-tabs") }}
+{%- endmacro %}
+{# Jobs tabs: the jobs table, the plots. Import with context (request) #}
+{% macro jobs_tabs() -%}
+{{ subnav("Jobs", [("Jobs", url_for("web_jobs"), (request.endpoint == "web_jobs"), none),
+                   ("Plots", url_for("web_plots"), (request.endpoint == "web_plots"), none)], "jobs-tabs") }}
+{%- endmacro %}
+{# Source tabs: overview, then the enabled sources. Import with context (request, nav_* flags) #}
+{% macro source_tabs() -%}
+{% set ns = namespace(tabs=[("Overview", url_for("web_sources"), (request.endpoint == "web_sources"), none)]) -%}
+{% for text, endpoint, shown in [("GitLab", "web_gitlab", nav_gitlab), ("GitHub", "web_github", nav_github),
+                                 ("Generic", "web_generic", nav_generic), ("Test", "web_test", nav_test)] if shown %}
+{% set ns.tabs = ns.tabs + [(text, url_for(endpoint), (request.endpoint == endpoint), none)] %}{% endfor -%}
+{{ subnav("Sources", ns.tabs, "source-tabs") }}
+{%- endmacro %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "badges.html" import reltime %}
+{% from "subnav.html" import source_tabs with context %}
+{% block title %}Lämpli Sources{% endblock %}
+{% block view %} data-view="sources" data-topics='["jobs", "gitlab", "github", "generic", "test"]'{% endblock %}
+{% block subnav %}{{ source_tabs() }}{% endblock %}
+{% block content %}
+    <div class="card">
+        <div class="card-header d-flex flex-wrap align-items-baseline gap-2">
+            <h1 class="h5 mb-0 me-auto">Sources</h1>
+            <span class="small text-body-secondary">Events: all events of the kept days. Ignored: of them,
+                not used (old pipelines, deleted branches, ignored projects).</span>
+        </div>
+        <div class="card-body" data-live="list">
+            <div class="table-responsive">
+            <table class="table table-sm table-hover w-auto mb-0" id="sources">
+                <thead>
+                    <tr><th>Source</th><th class="text-end">Events</th><th class="text-end">Ignored</th>
+                        <th class="text-end">Last event</th></tr>
+                </thead>
+                <tbody>
+                {% for src in sources %}
+                <tr>
+                    <td><a href="{{ src.url }}">{{ src.name }}</a></td>
+                    <td class="text-end">{{ src.events }}</td>
+                    <td class="text-end{{ ' text-body-secondary' if not src.ignored }}">{{ src.ignored }}</td>
+                    <td class="text-end">{% if src.last %}{{ reltime(src.last) }}{% else %}<span
+                        class="text-body-secondary">none</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

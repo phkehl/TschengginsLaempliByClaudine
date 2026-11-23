@@ -1,0 +1,489 @@
+/* Tschenggins Lämpli web pages, on top of Bootstrap */
+
+/* Data from a Lämpli: badge blinks (BLINK_TIME) */
+.badge.blink { animation: badge-blink 0.8s ease-out; }
+@keyframes badge-blink {
+    0% { filter: brightness(1.8); box-shadow: 0 0 0 0 rgba(var(--bs-success-rgb), 0.9); }
+    100% { filter: none; box-shadow: 0 0 0 0.45rem rgba(var(--bs-success-rgb), 0); }
+}
+
+/* Relative times (d:hh:mm:ss): digits same width */
+.reltime { font-variant-numeric: tabular-nums; }
+
+/* LED swatch: colour = result, animation = status */
+.swatch {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border-radius: 50%;
+    border: 1px solid var(--bs-secondary);
+    vertical-align: -0.125em;
+    flex-shrink: 0;
+}
+.r-pass { background: #0c0; box-shadow: 0 0 0.4em #0c0; }
+.r-fail { background: #e00; box-shadow: 0 0 0.4em #e00; }
+.r-warn { background: #eb0; box-shadow: 0 0 0.4em #eb0; }
+.r-unknown { background: #fff; }
+.off { background: #000; }
+.s-waiting { animation: pulse 0.3s infinite; }
+.s-running { animation: pulse 1s infinite; }
+.s-unknown { animation: blink 2s step-end infinite; }
+@keyframes pulse { 50% { opacity: 0.2; } }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Logo in the navbar, has a white background */
+.logo {
+    height: 2rem;
+    width: auto;
+    background: #fff;
+    border-radius: var(--bs-border-radius);
+}
+
+/* Info icon: narrow badge, link colour with link */
+.badge.info-icon {
+    color: var(--bs-secondary-color);
+    background: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+    cursor: pointer;
+}
+.badge.info-icon.has-link { color: var(--bs-link-color); }
+.badge.info-icon:hover { background: var(--bs-tertiary-bg); }
+.info-icon svg { display: inline-block; width: 1em; height: 1em; vertical-align: top; }
+.tooltip.info-tip .tooltip-inner { white-space: pre-line; text-align: left; max-width: 36em; }
+
+/* Job popover: path, badges top right. Info items as grid (keys dimmed), link */
+.popover.job-tip { --bs-popover-max-width: 36em; --bs-popover-body-padding-x: 0.75rem; }
+.job-tip .tip-head { display: flex; align-items: flex-start; gap: 0.5rem; }
+.job-tip .tip-path { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.job-tip .tip-badges { flex: none; white-space: nowrap; }
+.job-tip .tip-title {
+    margin-top: 0.5rem;
+    padding-top: 0.4rem;
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+}
+.job-tip .tip-info { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0 0.75rem; margin: 0; }
+.job-tip .tip-info dt { font-weight: normal; color: var(--bs-secondary-color); }
+.job-tip .tip-info dd { margin: 0; overflow-wrap: anywhere; }
+.job-tip .tip-link { display: inline-block; margin-top: 0.5rem; }
+
+/* Table cells: no wrap */
+.table td, .table th { white-space: nowrap; vertical-align: middle; }
+
+/* Long text cells (clip) share the free width, short ones (clip-s) max. 12em. Both clip with "…" (tooltip: full
+   text, laempli.js). The other cells only as wide as their text. No horizontal scroll, except on narrow screens. */
+.table td.clip { width: 100%; max-width: 0; min-width: 8em; overflow: hidden; text-overflow: ellipsis; }
+.table td.clip-s { max-width: 12em; overflow: hidden; text-overflow: ellipsis; }
+table:has(td.clip) td:not(.clip) { width: 1%; }
+.clip-row { display: flex; align-items: baseline; gap: 0.35rem; }
+.clip-row .clip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.clip-row a { flex: none; }
+
+/* Auto type detection: left. Number/time columns: text-end */
+table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric,
+table.dataTable th.dt-type-date, table.dataTable td.dt-type-date { text-align: left; }
+table.dataTable th.dt-type-numeric div.dt-column-header,
+table.dataTable th.dt-type-date div.dt-column-header { flex-direction: row; }
+table.dataTable.table-sm > thead > tr th.dt-type-numeric .dt-column-order,
+table.dataTable.table-sm > thead > tr th.dt-type-date .dt-column-order { left: auto; }
+
+/* Selected tab (both navbars): link colour, bar below */
+.navbar { --bs-navbar-active-color: var(--bs-link-color); }
+.navbar .nav-link.active { box-shadow: inset 0 -3px 0 var(--bs-link-color); font-weight: 500; }
+
+/* Second navbar tabs (devices, sources): one line, scroll if too many */
+.sub-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+.sub-tabs .nav-link { white-space: nowrap; }
+
+/* Jobs table: events link after the job, grey until row hover */
+.events-link { color: var(--bs-secondary-color); text-decoration: none; }
+.job-remove { color: var(--bs-secondary-color); line-height: 1; }
+.job-remove:hover { color: var(--bs-danger); }
+.job-remove svg { width: 1em; height: 1em; vertical-align: -0.125em; }
+tr:hover .events-link { color: var(--bs-link-color); }
+
+/* Result and status badges: same width, longer source statuses grow. Border: same height as light badges */
+.state-badge { min-width: 7.1em; }
+.state-badge, .narrow-badge { border: var(--bs-border-width) solid transparent; }
+
+/* Old (ignored) GitLab events */
+tr.ignored td { color: var(--bs-secondary-color); }
+
+/* Device details: label above value, as many columns as fit */
+.device-details { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.75rem 1rem; }
+.device-details dt { font-size: 0.8rem; font-weight: normal; color: var(--bs-secondary-color); }
+.device-details dd { margin: 0; min-height: 1.5em; overflow-wrap: anywhere; }
+.device-details dd:empty::before { content: "–"; color: var(--bs-tertiary-color); }
+
+/* LED config: select chain */
+.chain { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.chain select { width: auto; max-width: 18em; }
+
+/* LED config: one line per setting (label, input); sounds: group label, then sub labels */
+.led-form {
+    display: grid;
+    grid-template-columns: max-content max-content minmax(0, 1fr);
+    gap: 0.4rem 0.75rem;
+    align-items: center;
+}
+.led-form-label, .led-form-group, .led-form-sub { font-size: 0.875rem; color: var(--bs-secondary-color); }
+.led-form-label { grid-column: 1 / 3; }
+.led-form-group { grid-column: 1; align-self: start; padding-top: 0.25rem; }
+.led-form-sub { grid-column: 2; }
+.led-form-input { grid-column: 3; }
+.led-form-name { max-width: 20em; }
+.led-form-short { max-width: 8em; }
+.led-form-age { max-width: 17em; }
+.led-form-sound { max-width: 22em; }
+/* Project rows: settings left, pipelines right (below if narrow) */
+.row-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem 1.5rem; }
+
+/* LED config: LEDs as on the device, click selects */
+.led-visual {
+    padding: 1rem;
+    min-height: 14rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+    background: var(--bs-tertiary-bg);
+}
+.led-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(5.5rem, 9.5rem));
+    gap: 0.5rem;
+    justify-content: center;
+    align-content: center;
+}
+.led-tile-wrap { position: relative; min-width: 0; }
+.led-tile-info { position: absolute; top: 0.5rem; right: 0.5rem; line-height: 1; }
+.led-tile {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    padding: 0.4rem;
+    text-align: left;
+    color: var(--bs-body-color);
+    background: var(--bs-body-bg);
+    border: 2px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+}
+.led-tile .state-badge {
+    display: block;
+    min-width: 0;
+    padding-left: 0.2em;
+    padding-right: 0.2em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.led-tile-head { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; }
+.led-tile-label { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Project rows: one line per row, narrow badges */
+.led-rows { display: flex; flex-direction: column; justify-content: center; gap: 0.6rem; overflow-x: auto; }
+.led-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: max-content;
+    margin: 0 auto;
+    padding: 0.3rem;
+    cursor: pointer;
+    background: var(--bs-body-bg);
+    border: 2px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+}
+.led-row-num {
+    width: 1.8rem;
+    align-self: stretch;
+    padding: 0;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    background: var(--bs-secondary-bg);
+    border: 0;
+    border-radius: var(--bs-border-radius-sm);
+}
+.led-cells { display: flex; gap: 0.15rem; }
+.led-cell { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; width: 1.5rem; }
+.led-cell-state { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
+.led-cell-info { display: block; line-height: 1; }
+
+/* Project row pipelines: one grid, number and badges, name */
+.row-pipes {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.15rem 0.5rem;
+    align-items: baseline;
+}
+.row-pipe { display: contents; }
+.row-pipe-state { white-space: nowrap; }
+.row-pipe-num {
+    display: inline-block;
+    width: 1.4em;
+    margin-right: 0.25rem;
+    text-align: right;
+    color: var(--bs-secondary-color);
+}
+.row-pipe-label { overflow-wrap: anywhere; }
+.led-cell-num { font-size: 0.7rem; color: var(--bs-secondary-color); }
+.narrow-badge { width: 1.4rem; padding: 0.3em 0; }
+.narrow-off { color: var(--bs-tertiary-color); border: 1px solid var(--bs-border-color); }
+
+/* Selected LED or row, changes not saved */
+.led-tile:hover, .led-row:hover { border-color: var(--bs-primary-border-subtle); }
+.led-tile.selected, .led-row.selected {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+.led-tile.changed, .led-row.changed { outline: 2px dashed var(--bs-warning); outline-offset: 3px; }
+
+/* Phones: smaller LEDs, 15 per row fit */
+@media (max-width: 576px) {
+    .led-visual { padding: 0.5rem; }
+    .led-grid { gap: 0.4rem; }
+    .led-tile { padding: 0.3rem; }
+    .led-row { gap: 0.2rem; padding: 0.2rem; }
+    .led-row-num { width: 1.3rem; }
+    .led-cells { gap: 0.08rem; }
+    .led-cell { width: 1.05rem; }
+    .led-cell-num { font-size: 0.6rem; }
+    .narrow-badge { width: 1rem; font-size: 0.6rem; }
+}
+
+/* DataTables: dark lines above and below the header */
+table.dataTable > thead > tr > th {
+    border-top: 1px solid var(--bs-emphasis-color);
+    border-bottom: 1px solid var(--bs-emphasis-color);
+}
+
+/* DataTables: compact row above the table: search, number of rows; rows per page, pages */
+div.dt-container div.dt-layout-row:not(.dt-layout-table) { margin: 0 0 0.25rem; align-items: center; }
+div.dt-container div.dt-layout-start, div.dt-container div.dt-layout-end {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+div.dt-container div.dt-layout-start { flex: 1 1 auto; min-width: 0; }
+div.dt-container div.dt-layout-end { justify-content: flex-end; }
+div.dt-container div.dt-layout-start > *:not(:last-child),
+div.dt-container div.dt-layout-end > *:not(:first-child) { margin: 0; }
+div.dt-container div.dt-info { padding-top: 0; font-size: 0.875rem; color: var(--bs-secondary-color); }
+div.dt-container div.dt-search { flex: 1 1 14em; min-width: 0; max-width: 48em; }
+div.dt-container div.dt-search input { margin-left: 0; width: 100%; }
+/* Table filters (tablefilters.html), the search field right after them (no space between, as Bootstrap's
+   justify-content-between would make) */
+div.dt-container div.dt-layout-start:has(.table-filters) { justify-content: flex-start !important; }
+div.dt-container div.dt-layout-start:has(.table-filters) div.dt-search { flex: 0 1 16rem; }
+
+/* Phones: badges as wide as the text, headers wrap, less padding: tables fit */
+@media (max-width: 576px) {
+    .table .state-badge { min-width: 0; padding-left: 0.4em; padding-right: 0.4em; }
+    .table th { white-space: normal; }
+    .card-body:has(> .table-responsive), .card-body:has(> .dt-container) {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+
+/* Dashboard: tiles (colour = result; running: moving stripes, waiting: pulse), as many as fit */
+.dash { --tile-w: 18rem; --tile-h: 6.25rem; }
+.dash-search { width: 12rem; }
+
+/* Plots (plots.js): overview, axis, scroll box with a sticky canvas, tooltip, details panel */
+.plot-search { width: 12rem; }
+.plot-box { position: relative; }
+.plot-box canvas { display: block; user-select: none; }
+.plot-scroll { max-height: 300px; overflow-x: hidden; overflow-y: auto;
+    border-top: var(--bs-border-width) solid var(--bs-border-color); }
+.plot-scroll:focus { outline: none; }
+.plot-scroll:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+.plot-scroll.plot-noscroll { max-height: none !important; overflow-y: hidden; }
+.plot-spacer { position: relative; }
+.plot-spacer canvas { position: sticky; top: 0; }
+.plot-tip { position: absolute; z-index: 5; max-width: 32rem; padding: 0.3rem 0.5rem; font-size: 0.8rem;
+    white-space: pre-line; pointer-events: none; color: var(--bs-body-bg); background: var(--bs-emphasis-color);
+    border-radius: var(--bs-border-radius); opacity: 0.92; }
+.plot-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; }
+.plot-key { display: inline-flex; align-items: center; gap: 0.3rem; }
+.plot-swatch { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 2px; }
+.plot-state { color: #fff; min-width: 5.5em; }
+.plot-event th { width: 7rem; font-weight: 500; }
+.plot-event td { word-break: break-word; }
+.plot-list tr { cursor: pointer; }
+.plot-panel { position: sticky; top: 0.75rem; max-height: calc(100vh - 1.5rem); overflow-y: auto; }
+@media (max-width: 1199.98px) {
+    .plot-panel { position: static; max-height: none; }
+    .plot-panel.plot-idle { display: none; }
+}
+.dash-clock { font-variant-numeric: tabular-nums; font-weight: 600; }
+.dash-scroll { margin: -0.5rem; padding: 0.5rem; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile-w), 1fr));
+    grid-auto-rows: var(--tile-h);
+    gap: 0.5rem;
+}
+.dash-tile {
+    --bs-progress-height: 1.5rem;
+    --dash-base: none;
+    --dash-fx: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+    padding: 0.45rem 0.65rem;
+    overflow: hidden;
+    text-decoration: none;
+    border-radius: var(--bs-border-radius-lg);
+    animation: var(--dash-fx), var(--dash-base);
+}
+.dash-tile { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+.dash-tile:hover { filter: brightness(1.12); }
+.dash-top { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75em; font-weight: 700; }
+.dash-status { color: inherit; background: rgba(0, 0, 0, 0.25); }
+.dash-time { margin-left: auto; font-weight: 400; }
+.dash-name, .dash-sub { overflow: hidden; text-overflow: ellipsis; }
+.dash-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: 1.1em;
+    font-weight: 600;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.dash-sub { font-size: 0.85em; line-height: 1.3; white-space: nowrap; opacity: 0.9; }
+.dash-pin { display: none; }
+.dash-tile.dash-sticky { outline: 3px solid var(--bs-emphasis-color); outline-offset: -3px; }
+.dash-tile.dash-sticky .dash-pin { display: inline-flex; }
+.dash-tile.progress-bar-animated { --dash-base: progress-bar-stripes 1s linear infinite; }
+.dash-tile.dash-waiting { --dash-base: dash-wait 0.6s infinite alternate; }
+.dash-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    color: var(--bs-secondary-color);
+    border: 2px dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+}
+
+/* Dashboard config dialog: nearly the window width */
+.modal-dialog.dash-config-dialog { --bs-modal-width: min(1600px, calc(100vw - 2rem)); }
+
+/* Dashboard zoomed tile: in the centre above the tiles, details; a tap closes it */
+.dash-zoom {
+    --bs-progress-height: 2rem;
+    position: fixed;
+    z-index: 1080;
+    width: min(44rem, calc(100vw - 1rem));
+    max-height: calc(100vh - 1rem);
+    padding: 1rem 1.25rem;
+    overflow: auto;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border-radius: var(--bs-border-radius-xl);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6), 0 1rem 4rem 1rem rgba(0, 0, 0, 0.7);
+    transform-origin: top left;
+    transition: top 0.25s ease, left 0.25s ease;
+}
+.dash-zoom.progress-bar-animated { animation: progress-bar-stripes 1s linear infinite; }
+.dash-zoom .dash-top { font-size: 0.85em; }
+.dash-zoom-path { margin: 0.5rem 0; font-size: 1.3em; font-weight: 600; overflow-wrap: anywhere; }
+.dash-zoom-name { font-size: 1.3em; }
+.dash-sticky-name { width: 14rem; }
+.dash-info {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.15rem 1rem;
+    margin: 0 0 0.75rem;
+    padding: 0.6rem 0.8rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--bs-border-radius);
+}
+.dash-info:empty { display: none; }
+.dash-info dt { font-weight: normal; opacity: 0.75; }
+.dash-info dd { margin: 0; overflow-wrap: anywhere; }
+/* Jobs of a zoomed pipeline: chips, colours as the tiles */
+.dash-kids { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.75rem; }
+.dash-chip {
+    --bs-progress-height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: 100%;
+    padding: 0.2rem 0.3rem 0.2rem 0.55rem;
+    font-size: 0.85em;
+    border-radius: var(--bs-border-radius);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+.dash-chip:hover { filter: brightness(1.15); }
+.dash-chip.progress-bar-animated { animation: progress-bar-stripes 1s linear infinite; }
+.dash-chip.dash-waiting { animation: dash-wait 0.6s infinite alternate; }
+.dash-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.dash-chip .dash-status { font-size: 0.75em; }
+.dash-zoom-link { margin-bottom: 0.5rem; }
+.dash-zoom-hint { font-size: 0.8em; opacity: 0.75; }
+
+/* Dashboard kiosk (#/dashboard?full=1) and fullscreen: black, no navbars, bigger tiles, cursor hides */
+.dash.dash-big { --tile-w: 24rem; --tile-h: 8.5rem; font-size: 1.15rem; color: var(--bs-body-color); }
+.dash:fullscreen { padding: 1rem; overflow: hidden; background: #000; }
+body.kiosk { background: #000; }
+body.kiosk .navbar, body.kiosk #subnav { display: none !important; }
+body.kiosk main { padding-top: 1rem; }
+body.dash-idle.kiosk, body.dash-idle.kiosk *, body.dash-idle .dash:fullscreen, body.dash-idle .dash:fullscreen * {
+    cursor: none;
+}
+
+/* Dashboard changes: flash, FAIL (shake, red glow), fixed (green burst), with the base animation (stripes, pulse) */
+.dash-tile.fx-flash { --dash-fx: dash-flash 1.2s ease-out; }
+.dash-tile.fx-fail { --dash-fx: dash-shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97), dash-glow 2.5s ease-out; }
+.dash-tile.fx-fixed { --dash-fx: dash-burst 1.6s ease-out; }
+@keyframes dash-wait { to { filter: brightness(0.55); } }
+@keyframes dash-flash {
+    from { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.95), 0 0 2rem 0.5rem rgba(255, 255, 255, 0.7); }
+    to { box-shadow: 0 0 0 0.75rem rgba(255, 255, 255, 0), 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+@keyframes dash-shake {
+    10%, 90% { translate: -2px 0; }
+    20%, 80% { translate: 4px 0; }
+    30%, 50%, 70% { translate: -8px 0; }
+    40%, 60% { translate: 8px 0; }
+}
+@keyframes dash-glow {
+    from { box-shadow: 0 0 2.5rem 1rem rgba(255, 40, 40, 0.95); }
+    to { box-shadow: 0 0 0 0 rgba(255, 40, 40, 0); }
+}
+@keyframes dash-burst {
+    from { box-shadow: 0 0 0 0 rgba(40, 255, 90, 0.95), 0 0 2rem 0.5rem rgba(40, 255, 90, 0.8); }
+    to { box-shadow: 0 0 0 3rem rgba(40, 255, 90, 0), 0 0 0 0 rgba(40, 255, 90, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dash-tile { animation: none; }
+}
+
+/* Docs tab: Markdown as HTML */
+.doc { max-width: 72rem; }
+.doc h1, .doc h2, .doc h3, .doc h4 { margin-top: 1.5rem; scroll-margin-top: 0.5rem; }
+.doc h1:first-child { margin-top: 0; }
+.doc table { margin-bottom: 1rem; border-collapse: collapse; }
+.doc th, .doc td { padding: 0.25rem 0.5rem; vertical-align: top; border: 1px solid var(--bs-border-color); }
+.doc th { background: var(--bs-tertiary-bg); }
+.doc pre { padding: 0.75rem; background: var(--bs-tertiary-bg); border-radius: var(--bs-border-radius); }
+.doc img { max-width: 100%; height: auto; }
+
+/* Links to the JSON API, in the card footer */
+.api-links a { margin-left: 0.5rem; }
+
+/* Loading animation while a view loads */
+#loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; }
+main.busy { opacity: 0.5; }
+
+/* Firmware update progress (device page) */
+.ota-progress {
+    width: 14rem;
+    --bs-progress-height: 1.5rem;
+}

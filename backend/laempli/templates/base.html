@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Tschenggins Lämpli{% endblock %}</title>
+    {% if favicon %}<link rel="icon" type="image/png" href="{{ favicon }}">{% endif %}
+    <script>
+        // Light or dark, as the browser setting
+        document.documentElement.dataset.bsTheme =
+            (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/bootstrap.min.css', v=app_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='datatables/dataTables.bootstrap5.min.css', v=app_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='laempli.css', v=app_version) }}">
+    <script src="{{ url_for('static', filename='bootstrap/bootstrap.bundle.min.js', v=app_version) }}"></script>
+    <script src="{{ url_for('static', filename='datatables/dataTables.min.js', v=app_version) }}"></script>
+    <script src="{{ url_for('static', filename='datatables/dataTables.bootstrap5.min.js', v=app_version) }}"></script>
+</head>
+<body data-now="{{ server_now }}" data-root="{{ request.script_root }}" data-ws-port="{{ ws_port or '' }}"
+      data-version="{{ app_version }}">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+        <div class="container-fluid">
+            <a class="navbar-brand py-0" href="{{ url_for('web_devices') }}">
+                <img class="logo" src="{{ url_for('static', filename='logo.png') }}" alt="Tschenggins Lämpli">
+            </a>
+            {# Live badge: right end, phones: left of the menu button #}
+            <span id="live" class="navbar-text small d-none ms-auto me-2 me-lg-0 ms-lg-2 order-lg-last"></span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
+                    aria-controls="nav" aria-expanded="false" aria-label="Menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="nav">
+                <ul class="navbar-nav me-auto">
+                    {% set tabs = [("Devices", "web_devices", ("web_devices", "web_device"), true),
+                                   ("Jobs", "web_jobs", ("web_jobs", "web_plots"), nav_jobs),
+                                   ("Dashboard", "web_dashboard", ("web_dashboard",), nav_jobs),
+                                   ("Firmwares", "web_firmwares", ("web_firmwares",), true),
+                                   ("Sources", "web_sources", ("web_sources", "web_gitlab", "web_github",
+                                    "web_generic", "web_test"), nav_sources),
+                                   ("Docs", "web_docs", ("web_docs",), nav_docs)] %}
+                    {% for label, endpoint, endpoints, shown in tabs if shown %}
+                    <li class="nav-item">
+                        <a class="nav-link{{ ' active' if request.endpoint in endpoints }}"
+                           {{- ' aria-current="page"'|safe if request.endpoint in endpoints }}
+                           href="{{ url_for(endpoint) }}">{{ label }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if user %}
+                <span class="navbar-text small text-nowrap ms-lg-3">{{ user }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    {# Second navbar of some views (device tabs), the script copies it #}
+    <div id="subnav" class="mb-3">{% block subnav %}{% endblock %}</div>
+    <main class="container-fluid pb-4"{% block view %}{% endblock %}>
+        {% block content %}<noscript><a href="{{ url_for('web_devices') }}">Devices</a></noscript>{% endblock %}
+    </main>
+    <div id="loading" class="d-none">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div>
+    </div>
+    <div class="modal fade" id="discard" tabindex="-1" aria-labelledby="discard_title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="discard_title">Unsaved changes</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">Discard unsaved changes?</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="discard_yes">Discard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if can_edit %}
+    <div class="modal fade" id="remove_branch" tabindex="-1" aria-labelledby="remove_title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="remove_title">Remove branch</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Remove the branch <strong id="remove_name"></strong> from the Lämpli backend?</p>
+                    <p class="mb-1" id="remove_count">These jobs go away:</p>
+                    <ul class="small mb-2" id="remove_jobs"></ul>
+                    <ul class="small text-body-secondary mb-0">
+                        <li>The Lämpli LEDs of these jobs change: project rows drop them, other LEDs show UNKNOWN.</li>
+                        <li>Nothing changes in <span id="remove_source">GitLab</span>: the branch and its pipelines
+                            stay there.</li>
+                        <li>A new pipeline on this branch brings it back.</li>
+                        <li>Use it for deleted branches that the webhook did not report.</li>
+                    </ul>
+                    <div class="alert alert-danger small py-1 px-2 mt-2 mb-0 d-none" id="remove_error"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="remove_yes">Remove</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <script src="{{ url_for('static', filename='plots.js', v=app_version) }}"></script>
+    <script src="{{ url_for('static', filename='laempli.js', v=app_version) }}"></script>
+</body>
+</html>

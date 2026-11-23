@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "subnav.html" import source_tabs with context %}
+{% from "apilinks.html" import api_links %}
+{% from "tablefilters.html" import log_filters %}
+{% block title %}GitLab Events{% endblock %}
+{% block view %} data-view="gitlab_log" data-topics='["gitlab"]' data-table="gitlab_log"{% endblock %}
+{% block subnav %}{{ source_tabs() }}{% endblock %}
+{% block content %}
+    <div class="card">
+        <div class="card-header d-flex flex-wrap align-items-baseline gap-2">
+            <h1 class="h5 mb-0 me-auto">GitLab pipeline and job events</h1>
+            <span class="small text-body-secondary" data-live="count">{{ total }}
+                events in the last {{ keep_days }} day{{ "s" if keep_days != 1 }}
+                {{- (", %d ignored"|format(ignored)) if ignored }}, newest first</span>
+        </div>
+        <div class="card-body" data-live="list">
+            {% if total %}{{ log_filters("gitlab_log", kinds, states) }}{% endif %}
+            <div class="table-responsive">
+            <table {% if total %}
+                id="gitlab_log" data-server="{{ url_for('web_gitlab_rows') }}"
+                {% endif %}class="table table-sm table-hover">
+                <thead>
+                    <tr><th class="text-end">Time</th><th>Event</th><th>Project</th><th>Ref</th><th>Downstream</th><th>Pipeline</th>
+                        <th>Job</th><th>Status</th><th class="text-end">Jobs (ok/failed/all)</th><th>Source</th><th>User</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            </div>
+            {% if not total %}
+            <p class="text-body-secondary mb-0">No data for the past {{ keep_days }} day{{ "s" if keep_days != 1 }}.</p>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            {{ api_links([
+                ("data", url_for("api_gitlab"), "GitLab state made from the events"),
+                ("log", url_for("api_gitlab_log"), "GitLab pipeline and job events (paged)")
+            ]) }}
+        </div>
+    </div>
+{% endblock %}

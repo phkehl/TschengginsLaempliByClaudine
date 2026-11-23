@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "subnav.html" import subnav %}
+{% block title %}Lämpli Docs: {{ doc.title }}{% endblock %}
+{% block view %} data-view="docs"{% endblock %}
+{% block subnav %}{{ subnav("Docs", doc_tabs, "doc-tabs") }}{% endblock %}
+{% block content %}
+    <div class="card">
+        <div class="card-body doc">
+            {% if body is none %}
+            <p class="text-body-secondary mb-0">Not available: {{ error or "file not found" }}.</p>
+            {% else %}
+            {{ body|safe }}
+            {% endif %}
+        </div>
+        <div class="card-footer small text-body-secondary">{{ doc.path }}, as at the backend start</div>
+    </div>
+{% endblock %}

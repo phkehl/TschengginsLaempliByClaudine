@@ -1,0 +1,34 @@
+{# Filters of a table (see sortTable() in laempli.js): button groups in front of the search field, in the URL hash. #}
+{# Each button: data-filter (name, request and hash parameter), data-value ("": all), data-mode (one: one value, #}
+{# many: several values, toggle: on or off). Server tables send them with the rows request, the others filter the #}
+{# rows by their data-<name> attribute. #}
+{# One group: name, mode, label (aria), items: [(value, title, button colour)], with an "All" button first #}
+{% macro filter_group(name, mode, label, items, all_title="All") -%}
+<div class="btn-group btn-group-sm" role="group" aria-label="{{ label }}">
+    <button type="button" class="btn btn-outline-secondary" data-filter="{{ name }}" data-mode="{{ mode }}"
+            data-value="" title="{{ label }}: all">{{ all_title }}</button>
+    {% for value, title, cls in items %}
+    <button type="button" class="btn btn-outline-{{ cls }}" data-filter="{{ name }}" data-mode="{{ mode }}"
+            data-value="{{ value }}">{{ title }}</button>
+    {% endfor %}
+</div>
+{%- endmacro %}
+{# Event log table: kind (one), states (several), ignored entries (show or hide). kinds, states: items, see above #}
+{% macro log_filters(table, kinds, states) -%}
+<div class="table-filters d-flex flex-wrap align-items-center gap-2" data-filters="{{ table }}">
+    {% if kinds %}
+    {{ filter_group("kind", "one", "Kind", kinds) }}
+    {{ filter_group("state", "many", "Status", states) }}
+    {% endif %}
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="ignored" data-mode="toggle"
+            data-value="1" title="Show the ignored events (old pipelines, deleted branches, ignored projects)">Ignored
+    </button>
+</div>
+{%- endmacro %}
+{# Jobs table: results and statuses (several each). results, statuses: items, see above #}
+{% macro jobs_filters(table, results, statuses) -%}
+<div class="table-filters d-flex flex-wrap align-items-center gap-2" data-filters="{{ table }}">
+    {{ filter_group("result", "many", "Result", results, "All results") }}
+    {{ filter_group("status", "many", "Status", statuses, "All statuses") }}
+</div>
+{%- endmacro %}

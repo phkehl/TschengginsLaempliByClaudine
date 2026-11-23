@@ -1,0 +1,58 @@
+# systemd unit for the Tschenggins Lämpli backend
+#
+# Install as system unit:
+#   sudo cp backend/tschenggins-laempli.service.example /etc/systemd/system/tschenggins-laempli.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now tschenggins-laempli
+#   journalctl -u tschenggins-laempli -f
+#
+# Install as user unit (no sudo, the user's clone):
+#   cp backend/tschenggins-laempli.service.example backend/tschenggins-laempli.service
+#   (edit: WantedBy=default.target, see the [Install] section below)
+#   ln -s $PWD/backend/tschenggins-laempli.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now tschenggins-laempli
+#   sudo loginctl enable-linger $USER    # start at boot, without a login
+#   journalctl --user -u tschenggins-laempli -f
+#
+# Check that "systemctl [--user] is-enabled tschenggins-laempli" says "enabled". "linked" is not sufficient: the
+# service then does not start at boot.
+#
+# Change the paths and the user as necessary. The backend configuration is in backend/tschenggins-laempli.yaml
+# (copy of backend/tschenggins-laempli.yaml.example, listen: 127.0.0.1 for a reverse proxy on the same host).
+
+[Unit]
+Description=flipflip's Tschenggins Lämpli backend service (%N)
+After=network.target
+
+[Service]
+Type=simple
+User=laempli
+Group=laempli
+WorkingDirectory=/home/laempli/TschengginsLaempliByClaudine
+ExecStart=/home/laempli/TschengginsLaempliByClaudine/backend/tschenggins-laempli.py
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=3
+SyslogIdentifier=%N
+
+ProtectSystem=strict
+ReadWritePaths=/home/laempli/TschengginsLaempliByClaudine/data
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+StandardOutput=journal
+StandardError=journal
+MemoryHigh=400M
+MemoryMax=600M
+CPUQuota=200%
+TasksMax=200
+
+[Install]
+# System unit: multi-user.target. User unit: default.target (a user manager has no multi-user.target, the service
+# then does not start at boot).
+WantedBy=multi-user.target

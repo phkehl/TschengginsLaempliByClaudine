@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "subnav.html" import source_tabs with context %}
+{% from "apilinks.html" import api_links %}
+{% block title %}Generic Events{% endblock %}
+{% block view %} data-view="generic_log" data-topics='["generic"]' data-table="generic_log"{% endblock %}
+{% block subnav %}{{ source_tabs() }}{% endblock %}
+{% block content %}
+    <div class="card">
+        <div class="card-header d-flex flex-wrap align-items-baseline gap-2">
+            <h1 class="h5 mb-0 me-auto">Generic job updates</h1>
+            <span class="small text-body-secondary" data-live="count">{{ total }}
+                updates in the last {{ keep_days }} day{{ "s" if keep_days != 1 }}, newest first</span>
+        </div>
+        <div class="card-body" data-live="list">
+            <div class="table-responsive">
+            <table {% if total %}
+                id="generic_log" data-server="{{ url_for('web_generic_rows') }}"
+                {% endif %}class="table table-sm table-hover">
+                <thead>
+                    <tr><th class="text-end">Time</th><th>Action</th><th>Job</th><th>Status</th><th>Result</th><th class="text-end">Timeout</th>
+                        <th>Client</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            </div>
+            {% if not total %}
+            <p class="text-body-secondary mb-0">No data for the past {{ keep_days }} day{{ "s" if keep_days != 1 }}.</p>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            {{ api_links([
+                ("data", url_for("api_generic"), "All generic jobs"),
+                ("log", url_for("api_generic_log"), "Generic job updates (paged)")
+            ]) }}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "badges.html" import reltime %}
+{% from "apilinks.html" import api_links %}
+{% from "subnav.html" import device_tabs %}
+{% block title %}Lämpli Devices{% endblock %}
+{% block view %} data-view="devices" data-topics='["devices", "firmwares"]' data-table="devices"{% endblock %}
+{% block subnav %}{{ device_tabs(devices) }}{% endblock %}
+{% block content %}
+    <div class="card">
+        <div class="card-header d-flex flex-wrap align-items-baseline gap-2">
+            <h1 class="h5 mb-0 me-auto">Devices</h1>
+            <span class="small text-body-secondary">Click &#9998; to set the LEDs and settings of a device.</span>
+        </div>
+        <div class="card-body" data-live="list">
+            {% if devices %}
+            <div class="table-responsive">
+            <table id="devices" class="table table-sm table-hover">
+                <thead>
+                    <tr><th data-orderable="false"></th><th>Name</th><th>ID</th><th>Status</th><th class="text-end">Last report</th>
+                        <th class="text-end">Since</th><th>WiFi</th><th class="text-end">Signal</th><th class="text-end">Uptime</th>
+                        <th>CPU</th><th class="text-end">Free heap</th>
+                        <th>Local IP</th><th>Remote IP</th><th>Firmware</th><th>User</th><th class="text-end">LEDs</th></tr>
+                </thead>
+                <tbody>
+                {% for dev in devices %}
+                <tr>
+                    <td><a class="btn btn-sm btn-outline-primary py-0 px-1"
+                           href="{{ url_for('web_device', dev_id=dev.id) }}" title="LEDs and settings"
+                           aria-label="LEDs and settings of {{ dev.id }}">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                             stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M11 2.5l2.5 2.5L5 13.5l-3.5 1 1-3.5z"/><path d="M9.5 4l2.5 2.5"/></svg></a></td>
+                    <td data-order="{{ dev.name or "" }}">{% if dev.name %}{{ dev.name }}{% else %}<span
+                        class="text-body-secondary">(none)</span>{% endif %}</td>
+                    <td>{{ dev.id }}</td>
+                    <td>{% if dev.connected %}<span class="badge text-bg-success" data-dev-status="{{ dev.id }}">connected</span>
+                        {% else %}<span class="badge text-bg-secondary" data-dev-status="{{ dev.id }}">disconnected</span>
+                        {%- endif %}</td>
+                    <td class="text-end" data-order="{{ dev.report or 0 }}">{{ reltime(dev.report) }}</td>
+                    <td class="text-end" data-order="{{ dev.since or 0 }}">{{ reltime(dev.since) }}</td>
+                    <td>{{ dev.ssid or "" }}</td>
+                    <td class="text-end" data-order="{{ dev.rssi if dev.rssi is number else -999 }}">
+                        {{ "%d dBm"|format(dev.rssi) if dev.rssi is number else "" }}</td>
+                    <td class="text-end" data-order="{{ dev.uptime if dev.uptime is number else -1 }}">
+                        {{ dev.uptime|dhms if dev.uptime is number else "" }}</td>
+                    <td>{{ dev.cpu or "" }}</td>
+                    <td class="text-end text-nowrap" data-order="{{ dev.heap if dev.heap is number else -1 }}">
+                        {{ dev|heap }}</td>
+                    <td>{{ dev.local_ip or "" }}</td>
+                    <td>{{ dev.remote_ip or "" }}</td>
+                    <td{% if dev.fw.newer %} class="text-danger fw-bold"
+                        title="Latest available: {{ dev.fw.latest.version }}"{% endif %}>{{ dev.firmware or "" }}</td>
+                    <td>{{ dev.user or "" }}</td>
+                    <td class="text-end">{{ dev.configured }}/{{ dev.leds or "?" }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <p class="text-body-secondary mb-0">No devices yet.</p>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            {{ api_links([
+                ("devices", url_for("api_devices"), "All devices with connection and report data")
+            ]) }}
+        </div>
+    </div>
+{% endblock %}
